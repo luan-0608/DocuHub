@@ -1,0 +1,83 @@
+### Maven / Spring Boot ###
+HELP.md
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### Node / frontend ###
+node_modules/
+
+### Build output ###
+build/
+out/
+dist/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+*.war
+*.nar
+*.ear
+!mvnw
+!mvnw.cmd
+
+### Runtime / logs ###
+logs/
+*.log
+*.pid
+*.seed
+*.stackdump
+hs_err_pid*
+replay_pid*
+
+### Local configuration and secrets ###
+.env
+.env.*
+!.env.example
+# Override cuc bo tung may (vd: doi port RabbitMQ UI tren Windows)
+docker-compose.override.yml
+application-local.properties
+application-local.yml
+application-*.local.properties
+application-*.local.yml
+
+### IDE - Eclipse / STS ###
+.apt_generated/
+.apt_generated_tests/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+
+### IDE - IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+
+### IDE - NetBeans ###
+/nbproject/private/
+/nbbuild/
+/nbdist/
+/.nb-gradle/
+
+### IDE - VS Code ###
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+
+### OS files ###
+.DS_Store
+Thumbs.db
+desktop.ini
+
+### Temporary files ###
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+
+### Uploaded files (local storage) ###
+uploads/

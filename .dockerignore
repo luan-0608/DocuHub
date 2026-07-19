@@ -1,0 +1,11 @@
+# Giu context build nho: may service build tu goc repo
+**/target
+frontend/node_modules
+frontend/dist
+.git
+.idea
+.vscode
+uploads
+docs
+*.png
+*.txt

@@ -1,0 +1,231 @@
+name: docuhub
+
+# Bien ${VAR:-default} doc tu file .env cung thu muc (xem .env.example).
+# Khong co .env van chay duoc voi gia tri dev mac dinh.
+
+services:
+  # ================= HA TANG =================
+
+  mysql-user:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASS:-docuhub}
+      MYSQL_DATABASE: docuhub_user
+    ports:
+      - "3307:3306" # host:container — mo ra host de xem DB bang Workbench
+    volumes:
+      - mysql_user_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root --password=$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  mysql-document:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASS:-docuhub}
+      MYSQL_DATABASE: docuhub_document
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_document_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root --password=$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  mysql-chat:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASS:-docuhub}
+      MYSQL_DATABASE: docuhub_chat
+    ports:
+      - "3309:3306"
+    volumes:
+      - mysql_chat_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root --password=$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-docuhub}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-docuhub}
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Web UI quan ly (login = user/pass o tren)
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+
+  # ================= SPRING CLOUD =================
+
+  discovery-server:
+    build:
+      context: .
+      dockerfile: discovery-server/Dockerfile
+    ports:
+      - "8761:8761" # dashboard Eureka
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    ports:
+      - "8080:8080" # cong vao duy nhat cua he thong
+    environment:
+      EUREKA_URL: http://discovery-server:8761/eureka
+      JWT_SECRET: ${JWT_SECRET:-ZGVmYXVsdC1kb2N1aHViLXNlY3JldC1jaGFuZ2UtbWUtMzJieXRlcyE=}
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # ================= BUSINESS SERVICES =================
+
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    ports:
+      - "8081:8081" # mo truc tiep de xem swagger tung service khi demo
+    environment:
+      DB_URL: jdbc:mysql://mysql-user:3306/docuhub_user?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      DB_USER: root
+      DB_PASS: ${DB_PASS:-docuhub}
+      EUREKA_URL: http://discovery-server:8761/eureka
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER:-docuhub}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-docuhub}
+      JWT_SECRET: ${JWT_SECRET:-ZGVmYXVsdC1kb2N1aHViLXNlY3JldC1jaGFuZ2UtbWUtMzJieXRlcyE=}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-docuhub-internal-dev-token}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@docuhub.vn}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    depends_on:
+      mysql-user:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  document-service:
+    build:
+      context: .
+      dockerfile: document-service/Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      DB_URL: jdbc:mysql://mysql-document:3306/docuhub_document?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      DB_USER: root
+      DB_PASS: ${DB_PASS:-docuhub}
+      EUREKA_URL: http://discovery-server:8761/eureka
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER:-docuhub}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-docuhub}
+      JWT_SECRET: ${JWT_SECRET:-ZGVmYXVsdC1kb2N1aHViLXNlY3JldC1jaGFuZ2UtbWUtMzJieXRlcyE=}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-docuhub-internal-dev-token}
+      STORAGE_DIR: /app/uploads
+      # local = luu volume Docker; cloudinary = day len cloud (can CLOUDINARY_URL trong .env)
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
+      CLOUDINARY_URL: ${CLOUDINARY_URL:-}
+    volumes:
+      - uploads_data:/app/uploads # file upload song qua cac lan rebuild container
+    depends_on:
+      mysql-document:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  chat-service:
+    build:
+      context: .
+      dockerfile: chat-service/Dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      DB_URL: jdbc:mysql://mysql-chat:3306/docuhub_chat?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      DB_USER: root
+      DB_PASS: ${DB_PASS:-docuhub}
+      EUREKA_URL: http://discovery-server:8761/eureka
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER:-docuhub}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-docuhub}
+      JWT_SECRET: ${JWT_SECRET:-ZGVmYXVsdC1kb2N1aHViLXNlY3JldC1jaGFuZ2UtbWUtMzJieXRlcyE=}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-docuhub-internal-dev-token}
+      # Key AI dien trong .env (xem .env.example) — khong co key thi he thong
+      # van chay, chi tinh nang AI (chat/tom tat/lap chi muc) bao loi cau hinh.
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://api.openai.com/v1}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-large}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
+      LLM_CHAT_MODEL: ${LLM_CHAT_MODEL:-gpt-4o-mini}
+    depends_on:
+      mysql-chat:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  # ================= FRONTEND =================
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:80" # mo http://localhost:3000
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+
+volumes:
+  mysql_user_data:
+  mysql_document_data:
+  mysql_chat_data:
+  uploads_data:

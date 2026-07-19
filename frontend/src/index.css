@@ -1,0 +1,136 @@
+/* Lora: serif hỗ trợ tiếng Việt đầy đủ — chữ thẳng cho nội dung, nghiêng chỉ dành cho nhấn nhá */
+@import '@fontsource/lora/400.css';
+@import '@fontsource/lora/500.css';
+@import '@fontsource/lora/600.css';
+@import '@fontsource/lora/700.css';
+@import '@fontsource/lora/400-italic.css';
+@import '@fontsource/lora/600-italic.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Watercolor: nền giấy ấm, mực xanh ghi, các mảng màu nước bán trong suốt */
+    --background: 37 33% 97%;        /* giấy #faf8f5 */
+    --foreground: 216 24% 24%;       /* mực #2f3b4d — chữ nội dung, ~10:1 trên giấy */
+    --card: 45 60% 99%;              /* trắng ngà #fffdf9 — bề mặt làm việc luôn ĐẶC */
+    --card-foreground: 216 24% 24%;
+    --popover: 45 60% 99%;
+    --popover-foreground: 216 24% 24%;
+    --primary: 216 38% 47%;          /* xanh ghi #4a6fa5 — tiêu đề, nút chính */
+    --primary-foreground: 37 33% 98%;
+    --secondary: 178 42% 66%;        /* teal #85cdca — chỉ dùng dạng tint */
+    --secondary-foreground: 216 24% 24%;
+    --muted: 36 25% 93%;             /* giấy sẫm hơn một tông */
+    --muted-foreground: 215 16% 43%; /* #5c6b80 — chữ phụ, ~4.9:1 */
+    --accent: 24 70% 70%;            /* peach #e8a87c — chỉ dùng dạng tint */
+    --accent-foreground: 216 24% 24%;
+    --destructive: 0 38% 50%;        /* đỏ gạch dịu, đủ tương phản với chữ trắng */
+    --destructive-foreground: 0 0% 100%;
+    --success: 160 32% 36%;
+    --border: 216 28% 82%;           /* viền mảnh xanh ghi nhạt — ranh giới mềm nhưng còn thấy */
+    --input: 216 28% 78%;
+    --ring: 216 38% 47%;
+    --radius: 1rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  /* Link neo trong header trang chủ cuộn mượt (tự tắt khi prefers-reduced-motion) */
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Lora', Georgia, 'Times New Roman', serif;
+    /* Hơi màu loang cố định rất nhạt ở hai góc — không khí màu nước trên mọi trang,
+       đủ mờ để không đè lên nội dung ở các màn hình dày dữ liệu */
+    background-image:
+      radial-gradient(1100px 700px at 6% -8%, hsl(178 42% 66% / 0.14), transparent 62%),
+      radial-gradient(900px 620px at 102% 2%, hsl(24 70% 70% / 0.12), transparent 58%),
+      radial-gradient(1000px 800px at 50% 115%, hsl(216 38% 47% / 0.07), transparent 60%);
+    background-attachment: fixed;
+  }
+  h1, h2, h3, h4, .font-display {
+    font-family: 'Lora', Georgia, serif;
+  }
+  ::selection {
+    background: hsl(178 42% 66% / 0.4);
+  }
+}
+
+@layer utilities {
+  /* Vệt màu loang lớn — đặt absolute trong section relative, màu + kích thước tùy nơi dùng */
+  .wc-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(64px);
+    pointer-events: none;
+  }
+
+  /* Hiện dần khi cuộn tới (kết hợp IntersectionObserver gắn class .is-visible) */
+  .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Icon trong card lớn dần nhẹ nhàng khi hover card cha — thay cho tilt cứng */
+  .tilt-on-hover {
+    transition: transform 0.5s ease-in-out;
+  }
+  .group:hover .tilt-on-hover {
+    transform: scale(1.06);
+  }
+
+  /* Dải chữ trôi ngang vô hạn — chậm rãi như màu loang trên giấy ướt */
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee 44s linear infinite;
+  }
+  .marquee-track:hover {
+    animation-play-state: paused;
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* Card hiện dần so le khi vào trang (delay đặt qua animation-delay inline) */
+  .card-enter {
+    opacity: 0;
+    animation: card-enter 0.5s ease-in-out forwards;
+  }
+  @keyframes card-enter {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Blob trôi rất chậm cho hero — hơi thở của trang, không phải hiệu ứng nhảy nhót */
+  .blob-drift {
+    animation: blob-drift 14s ease-in-out infinite alternate;
+  }
+  @keyframes blob-drift {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(24px, -18px) scale(1.08); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

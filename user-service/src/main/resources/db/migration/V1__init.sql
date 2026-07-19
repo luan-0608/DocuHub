@@ -1,0 +1,11 @@
+CREATE TABLE users (
+    id            BIGINT PRIMARY KEY AUTO_INCREMENT,
+    email         VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name     VARCHAR(255) NOT NULL,
+    role          VARCHAR(20)  NOT NULL DEFAULT 'USER',
+    reset_token   VARCHAR(255),
+    reset_expires DATETIME,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
